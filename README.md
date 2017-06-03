@@ -1,0 +1,2 @@
+# csmanager
+Counter-Strike Manager
