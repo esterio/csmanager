@@ -1,0 +1,96 @@
+#!/usr/bin/env node
+
+const fs = require('fs');
+const path = require('path');
+
+function checkCmd(cmd) {
+    const pathEnv = process.env.path || process.env.Path || process.env.PATH;
+    const pathArray = pathEnv ? pathEnv.split(path.delimiter) : [];
+
+    for (let i = 0; i < pathArray.length; i++) {
+        const pathName = path.resolve(pathArray[i], cmd);
+
+        if (fs.existsSync(pathName) && !fs.statSync(pathName).isDirectory()) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+function checkCmds() {
+    const cmds = ['systemctl', 'update-rc.d', 'chkconfig', 'rc-update', 'launchctl'];
+    for (let i = 0; i < cmds.length; i++) {
+        if (checkCmd(cmds[i])) {
+            return cmds[i];
+        }
+    }
+
+    return false;
+}
+
+function systemctl() {
+    const template = `
+        [Unit]
+        Description=Counter-Strike Servers manager
+        After=network.target
+        [Service]
+        Type=forking
+        User=root
+        LimitNOFILE=infinity
+        LimitNPROC=infinity
+        LimitCORE=infinity
+        PIDFile=/var/run/cssm.pid
+        ExecStart=/usr/local/bin/cssm
+        ExecStop= kill -9 $(cat /var/run/cssm.pid)
+        [Install]
+        WantedBy=multi-user.target
+        `;
+
+    fs.writeFileSync('/etc/systemd/system/cssm.service', template);
+
+    const commands = [
+        'systemctl enable cssm',
+        'systemctl start cssm',
+        'systemctl daemon-reload',
+        'systemctl status cssm'
+    ];
+}
+
+if (process.getuid() !== 0) {
+    console.error('Root needed');
+    process.exit(1);
+}
+
+const targetPath = path.resolve(__dirname, 'cssm');
+try {
+    fs.symlinkSync(targetPath, '/usr/local/bin/cssm');
+} catch (error) {
+    if (error) {
+        if (error.code === 'EEXIST') {
+            try {
+                fs.unlinkSync('/usr/local/bin/cssm');
+                fs.symlinkSync(targetPath, '/usr/local/bin/cssm');
+            } catch (error) {
+                console.error(error.message);
+                process.exit(1);
+            }
+        } else {
+            console.error(error.message);
+            process.exit(1);
+        }
+    }
+}
+
+const initSystem = checkCmds();
+if (initSystem === false) {
+    console.error('Init system not found');
+    process.exit(1);
+}
+
+switch (initSystem) {
+    case 'systemctl': {
+        systemctl();
+    } break;
+}
+

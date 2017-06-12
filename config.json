@@ -1,0 +1,24 @@
+{
+    "servers": {
+        "hlds": {
+            "ip": "127.0.0.1",
+            "timeout": 3000,
+            "path": "/home/esterio/cs/hlds/hlds_linux",
+            "args": [
+                "+ip 127.0.0.1",
+                "+port 27015",
+                "+map $2000$",
+                "+maxplayers 10",
+                "-console",
+                "-game cstrike",
+                "+sv_lan 0",
+                "-noipx",
+                "-insecure",
+                "-nomaster",
+                "-nosteam",
+                "-norestart",
+                "-condebug"
+            ]
+        }
+    }
+}
